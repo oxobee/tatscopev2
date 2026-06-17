@@ -1,0 +1,120 @@
+{
+  "theme": "Dark",
+  "archetype": "5 (Luxury/Cinematic) with Editorial Edge",
+  "domain": "TattooMatch - Tinder for Tattoo Artists",
+  "language": "Turkish",
+  "typography": {
+    "primary_headings": "Cabinet Grotesk",
+    "secondary_body": "Manrope",
+    "technical_mono": "JetBrains Mono",
+    "rules": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-black",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "body": "text-base font-medium leading-relaxed text-zinc-300",
+      "overline": "text-xs tracking-[0.2em] uppercase font-bold text-zinc-500"
+    }
+  },
+  "colors": {
+    "base_bg": "zinc-950",
+    "surface_card": "zinc-900",
+    "surface_glass": "zinc-900/60 backdrop-blur-2xl border border-white/5",
+    "accent_rose": "rose-500",
+    "accent_indigo": "indigo-600",
+    "gradient_primary": "bg-gradient-to-br from-rose-500/90 to-indigo-600/90",
+    "text_primary": "text-zinc-50",
+    "text_secondary": "text-zinc-400",
+    "text_muted": "text-zinc-600",
+    "rules": "Avoid pure black (#000000). Use matte zinc-950 to reduce eye strain. Text should not be pure white, use zinc-50 for peak readability."
+  },
+  "spacing_and_layout": {
+    "global_spacing": "Generous. Use p-6, p-8 for containers. Material Design 3 inspired but denser for editorial feel.",
+    "desktop_architecture": "3-Column layout: Left Sidebar (Fixed nav, w-64), Center Feed (max-w-md mx-auto, w-full, representing the mobile viewport experience), Right Panel (w-80, sticky for Tattoo DNA insights & stats).",
+    "mobile_architecture": "Full screen vertical feed (100dvh). Bottom sticky navigation using crystal glassmorphism.",
+    "grid_system": "Use Bento grids for Artist Profile (Portfolio) and Tattoo DNA data visualization."
+  },
+  "motion_and_interactions": {
+    "library": "framer-motion",
+    "vertical_feed": "Scroll snap mandatory (snap-y). Each card takes 100dvh (or h-full of feed container).",
+    "horizontal_gallery": "Nested inside feed card. snap-x mandatory for swipeable artist portfolio pieces.",
+    "gestures": {
+      "double_tap": "Trigger Heart animation (scale 0->1->1.2->0, opacity 0->1->0) and save to 'Panom'.",
+      "single_tap": "Open fullscreen image viewer modal with backdrop-blur. Clicking outside closes it.",
+      "swipe": "Horizontal for gallery, Vertical for next artist in feed."
+    }
+  },
+  "components": {
+    "buttons": "Pill-shaped (rounded-full). Primary CTA uses gradient_primary with subtle glow shadow. Include data-testid.",
+    "cards": "Subtle zinc-900 background, no border or 1px border-white/5. Overlays for text on images must use max bg-black/50.",
+    "tattoo_dna": "Bento grid layout. Progress bars for style percentages using rose-to-indigo gradient.",
+    "bottom_nav_mobile": "Crystal glassmorphism floating just above bottom. Active icons get rose/indigo gradient text or icon fill."
+  },
+  "language_mapping": {
+    "Discover": "Keşfet",
+    "Moodboard": "Panom",
+    "Tattoo DNA": "Dövme DNA'm",
+    "Profile": "Profil",
+    "Dashboard": "Panel",
+    "Login": "Giriş Yap",
+    "Register": "Kayıt Ol",
+    "Artist": "Sanatçı",
+    "User": "Kullanıcı",
+    "Messages": "Mesajlar",
+    "Follow": "Takip Et",
+    "Save": "Kaydet",
+    "Comments": "Yorumlar"
+  },
+  "image_urls": {
+    "splash_backgrounds": [
+      {
+        "url": "https://images.unsplash.com/photo-1753259789341-808371092e19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA0MTJ8MHwxfHNlYXJjaHwxfHx0YXR0b28lMjBhcnRpc3QlMjBzdHVkaW98ZW58MHx8fHwxNzgxNzM5OTIwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "A tattoo artist preparing to start his work. Excellent for splash screen or auth background.",
+        "category": "splash"
+      }
+    ],
+    "artist_portraits": [
+      {
+        "url": "https://images.unsplash.com/photo-1775135461799-1fae0eceb80f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA0MTJ8MHwxfHNlYXJjaHw0fHx0YXR0b28lMjBhcnRpc3QlMjBzdHVkaW98ZW58MHx8fHwxNzgxNzM5OTIwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Tattoo artist working on client's arm",
+        "category": "feed_artist"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1753259669126-660f46975072?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA0MTJ8MHwxfHNlYXJjaHwzfHx0YXR0b28lMjBhcnRpc3QlMjBzdHVkaW98ZW58MHx8fHwxNzgxNzM5OTIwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "A tattoo artist inks a client's arm",
+        "category": "feed_artist"
+      }
+    ],
+    "tattoo_designs": [
+      {
+        "url": "https://images.unsplash.com/photo-1619009542298-584066f6fd30?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHw0fHxtaW5pbWFsaXN0JTIwdGF0dG9vJTIwZGVzaWdufGVufDB8fHx8MTc4MTczOTkyMHww&ixlib=rb-4.1.0&q=85",
+        "description": "Black and white photo of a person getting a tattoo",
+        "category": "gallery_item"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1775724861935-e60a977c3e03?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwdGF0dG9vJTIwZGVzaWdufGVufDB8fHx8MTc4MTczOTkyMHww&ixlib=rb-4.1.0&q=85",
+        "description": "Woman with a tattoo on her neck",
+        "category": "gallery_item"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1778524863804-554d74e14227?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwdGF0dG9vJTIwZGVzaWdufGVufDB8fHx8MTc4MTczOTkyMHww&ixlib=rb-4.1.0&q=85",
+        "description": "Arm with a small 444 tattoo in black and white.",
+        "category": "gallery_item"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1759346771288-ac905d1b1abf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwdGF0dG9vJTIwZGVzaWdufGVufDB8fHx8MTc4MTczOTkyMHww&ixlib=rb-4.1.0&q=85",
+        "description": "Man with trident tattoo on arm",
+        "category": "gallery_item"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install framer-motion, lucide-react, react-router-dom, and required Shadcn UI components.",
+    "Implement language purely in Turkish based on language_mapping.",
+    "Do NOT use Inter font. Use 'Cabinet Grotesk' for headings and 'Manrope' for body. Import them via standard CDN/Google Fonts if not locally available.",
+    "All interactive elements MUST have data-testid attributes (e.g., data-testid='like-button', data-testid='login-submit').",
+    "Feed must use TikTok-style scroll snap behavior (snap-y snap-mandatory).",
+    "Double tap must invoke a heart animation overlay using framer-motion scaling and opacity.",
+    "Maintain an editorial, luxurious dark theme: zinc-950 base, heavy contrast, glassmorphism overlays, and tasteful rose-to-indigo gradients. Avoid muddy gradients.",
+    "Use provided image URLs. NEVER use placeholders."
+  ]
+}
