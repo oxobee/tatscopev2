@@ -3,19 +3,16 @@ import urllib.parse
 
 
 def _parse_path(request):
-    # try common attributes
     path = None
     if hasattr(request, 'path'):
         path = request.path
     elif hasattr(request, 'url'):
         path = request.url
     elif hasattr(request, 'headers') and request.headers:
-        # fallback: some runtimes put full URL in header
         path = request.headers.get('x-now-original-path') or request.headers.get('x-forwarded-path')
     if not path:
         return ''
     p = urllib.parse.urlparse(path).path
-    # extract trailing part after /api/
     if '/api/' in p:
         return p.split('/api/', 1)[1].strip('/')
     if p.startswith('/api'):
@@ -31,9 +28,7 @@ def handler(request):
     action = _parse_path(request)
     method = getattr(request, 'method', None) or (request.headers.get('x-now-method') if hasattr(request, 'headers') else None)
     if not method and hasattr(request, 'get_data'):
-        # Vercel runtime usually provides method
         method = 'GET'
-    # route
     try:
         if action.startswith('auth_register') and method == 'POST':
             raw = request.body if hasattr(request, 'body') else request.get_data()
