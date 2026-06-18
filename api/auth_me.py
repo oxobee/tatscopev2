@@ -29,37 +29,52 @@ def _get_db():
     _client = pymongo.MongoClient(MONGO_URL)
     _db = _client[DB_NAME]
     return _db
-
-
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-
-@app.route('/', methods=['GET'])
-@app.route('/<path:_>', methods=['GET'])
-def handler():
-    headers = request.headers
-    auth = headers.get("authorization") or headers.get("Authorization")
-    if not auth:
-        return jsonify({"error": "missing auth"}), 401
-    if auth.lower().startswith("bearer "):
-        token = auth.split(" ", 1)[1]
+def _do_me(auth_header):
+    if not auth_header:
+        return 401, {"error": "missing auth"}
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header.split(" ", 1)[1]
     else:
-        token = auth
+        token = auth_header
     try:
         import jwt
     except Exception:
-        return jsonify({"error": "server missing dependencies"}), 500
+        return 500, {"error": "server missing dependencies"}
     JWT_SECRET = os.environ.get("JWT_SECRET")
     try:
         payload = jwt.decode(token, JWT_SECRET or "", algorithms=["HS256"])
     except Exception:
-        return jsonify({"error": "invalid token"}), 401
+        return 401, {"error": "invalid token"}
     db = _get_db()
     user = None
     if db:
         user = db.users.find_one({"user_id": payload.get("sub")}, {"_id": 0, "password_hash": 0})
     if not user:
-        return jsonify({"error": "user not found"}), 404
-    return jsonify(user)
+        return 404, {"error": "user not found"}
+    return 200, user
+
+
+try:
+    from flask import Flask, request, jsonify
+
+    app = Flask(__name__)
+
+
+    @app.route('/', methods=['GET'])
+    @app.route('/<path:_>', methods=['GET'])
+    def flask_handler(_path=""):
+        headers = request.headers
+        auth = headers.get("authorization") or headers.get("Authorization")
+        status, data = _do_me(auth)
+        return (jsonify(data), status)
+except Exception:
+    app = None
+
+
+def handler(request):
+    headers = getattr(request, 'headers', {})
+    auth = None
+    if headers:
+        auth = headers.get("authorization") or headers.get("Authorization")
+    status, data = _do_me(auth)
+    return json_response(data, status=status)

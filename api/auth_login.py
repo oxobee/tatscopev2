@@ -29,51 +29,70 @@ def _get_db():
     _client = pymongo.MongoClient(MONGO_URL)
     _db = _client[DB_NAME]
     return _db
-
-
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-
-@app.route('/', methods=['POST'])
-@app.route('/<path:_>', methods=['POST'])
-def handler():
-    try:
-        if hasattr(request, 'body'):
-            raw = request.body
-            if isinstance(raw, bytes):
-                body = json.loads(raw.decode())
-            else:
-                body = json.loads(raw)
-        else:
-            body = json.loads(request.get_data())
-    except Exception:
-        return json_response({"error": "invalid json"}, status=400)
+def _do_login(body):
     email = (body.get("email") or "").lower().strip()
     password = body.get("password")
     if not email or not password:
-        return json_response({"error": "email and password required"}, status=400)
+        return 400, {"error": "email and password required"}
     db = _get_db()
     if not db:
-        return json_response({"error": "database not configured"}, status=500)
+        return 500, {"error": "database not configured"}
     user = db.users.find_one({"email": email})
     if not user or not user.get("password_hash"):
-        return json_response({"error": "invalid credentials"}, status=401)
+        return 401, {"error": "invalid credentials"}
     try:
         import bcrypt
     except Exception:
-        return json_response({"error": "server missing dependencies"}, status=500)
+        return 500, {"error": "server missing dependencies"}
     try:
         ok = bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8"))
     except Exception:
         ok = False
     if not ok:
-        return json_response({"error": "invalid credentials"}, status=401)
+        return 401, {"error": "invalid credentials"}
     try:
         import jwt
     except Exception:
-        return json_response({"error": "server missing dependencies"}, status=500)
+        return 500, {"error": "server missing dependencies"}
     JWT_SECRET = os.environ.get("JWT_SECRET")
     token = jwt.encode({"sub": user["user_id"], "email": email}, JWT_SECRET or "", algorithm="HS256")
-    return jsonify({"user_id": user["user_id"], "email": email, "access_token": token})
+    return 200, {"user_id": user["user_id"], "email": email, "access_token": token}
+
+
+try:
+    from flask import Flask, request, jsonify
+
+    app = Flask(__name__)
+
+
+    @app.route('/', methods=['POST'])
+    @app.route('/<path:_>', methods=['POST'])
+    def flask_handler(_path=""):
+        try:
+            if hasattr(request, 'body'):
+                raw = request.body
+                if isinstance(raw, bytes):
+                    body = json.loads(raw.decode())
+                else:
+                    body = json.loads(raw)
+            else:
+                body = json.loads(request.get_data())
+        except Exception:
+            return jsonify({"error": "invalid json"}), 400
+        status, data = _do_login(body)
+        return (jsonify(data), status)
+except Exception:
+    app = None
+
+
+def handler(request):
+    try:
+        raw = request.body if hasattr(request, 'body') else request.get_data()
+        if isinstance(raw, bytes):
+            body = json.loads(raw.decode())
+        else:
+            body = json.loads(raw)
+    except Exception:
+        return json_response({"error": "invalid json"}, status=400)
+    status, data = _do_login(body)
+    return json_response(data, status=status)
