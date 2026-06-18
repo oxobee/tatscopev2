@@ -31,16 +31,17 @@ def _get_db():
     return _db
 
 
-def handler(request):
-    headers = getattr(request, 'headers', {})
-    auth = None
-    if headers:
-        auth = headers.get("authorization") or headers.get("Authorization")
-    if not auth and hasattr(request, 'get_data'):
-        # fallback
-        auth = request.headers.get('authorization') if hasattr(request, 'headers') else None
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+
+@app.route('/', methods=['GET'])
+def handler():
+    headers = request.headers
+    auth = headers.get("authorization") or headers.get("Authorization")
     if not auth:
-        return json_response({"error": "missing auth"}, status=401)
+        return jsonify({"error": "missing auth"}), 401
     if auth.lower().startswith("bearer "):
         token = auth.split(" ", 1)[1]
     else:
@@ -48,16 +49,16 @@ def handler(request):
     try:
         import jwt
     except Exception:
-        return json_response({"error": "server missing dependencies"}, status=500)
+        return jsonify({"error": "server missing dependencies"}), 500
     JWT_SECRET = os.environ.get("JWT_SECRET")
     try:
         payload = jwt.decode(token, JWT_SECRET or "", algorithms=["HS256"])
     except Exception:
-        return json_response({"error": "invalid token"}, status=401)
+        return jsonify({"error": "invalid token"}), 401
     db = _get_db()
     user = None
     if db:
         user = db.users.find_one({"user_id": payload.get("sub")}, {"_id": 0, "password_hash": 0})
     if not user:
-        return json_response({"error": "user not found"}, status=404)
-    return json_response(user)
+        return jsonify({"error": "user not found"}), 404
+    return jsonify(user)

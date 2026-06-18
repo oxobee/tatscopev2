@@ -1,9 +1,9 @@
-import os
-import json
+from flask import Flask, jsonify
 
-def handler(request):
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({"name": "TatScope", "status": "ok"}),
-    }
+app = Flask(__name__)
+
+
+@app.route("/", methods=["GET"]) 
+def health():
+    return jsonify({"name": "TatScope", "status": "ok"})
+

@@ -32,7 +32,13 @@ def _get_db():
     return _db
 
 
-def handler(request):
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+
+@app.route('/', methods=['POST'])
+def handler():
     try:
         if hasattr(request, 'body'):
             raw = request.body
@@ -75,4 +81,4 @@ def handler(request):
     db.users.insert_one(doc)
     JWT_SECRET = os.environ.get("JWT_SECRET")
     token = jwt.encode({"sub": user_id, "email": email}, JWT_SECRET or "", algorithm="HS256")
-    return json_response({"user_id": user_id, "email": email, "access_token": token}, status=201)
+    return jsonify({"user_id": user_id, "email": email, "access_token": token}), 201

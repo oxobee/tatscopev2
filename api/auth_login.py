@@ -31,7 +31,13 @@ def _get_db():
     return _db
 
 
-def handler(request):
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+
+@app.route('/', methods=['POST'])
+def handler():
     try:
         if hasattr(request, 'body'):
             raw = request.body
@@ -69,4 +75,4 @@ def handler(request):
         return json_response({"error": "server missing dependencies"}, status=500)
     JWT_SECRET = os.environ.get("JWT_SECRET")
     token = jwt.encode({"sub": user["user_id"], "email": email}, JWT_SECRET or "", algorithm="HS256")
-    return json_response({"user_id": user["user_id"], "email": email, "access_token": token})
+    return jsonify({"user_id": user["user_id"], "email": email, "access_token": token})
