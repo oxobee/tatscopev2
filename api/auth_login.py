@@ -59,32 +59,6 @@ def _do_login(body):
     return 200, {"user_id": user["user_id"], "email": email, "access_token": token}
 
 
-try:
-    from flask import Flask, request, jsonify
-
-    app = Flask(__name__)
-
-
-    @app.route('/', methods=['POST'])
-    @app.route('/<path:_>', methods=['POST'])
-    def flask_handler(_path=""):
-        try:
-            if hasattr(request, 'body'):
-                raw = request.body
-                if isinstance(raw, bytes):
-                    body = json.loads(raw.decode())
-                else:
-                    body = json.loads(raw)
-            else:
-                body = json.loads(request.get_data())
-        except Exception:
-            return jsonify({"error": "invalid json"}), 400
-        status, data = _do_login(body)
-        return (jsonify(data), status)
-except Exception:
-    app = None
-
-
 def handler(request):
     try:
         raw = request.body if hasattr(request, 'body') else request.get_data()

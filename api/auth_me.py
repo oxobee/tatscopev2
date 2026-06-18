@@ -54,23 +54,6 @@ def _do_me(auth_header):
     return 200, user
 
 
-try:
-    from flask import Flask, request, jsonify
-
-    app = Flask(__name__)
-
-
-    @app.route('/', methods=['GET'])
-    @app.route('/<path:_>', methods=['GET'])
-    def flask_handler(_path=""):
-        headers = request.headers
-        auth = headers.get("authorization") or headers.get("Authorization")
-        status, data = _do_me(auth)
-        return (jsonify(data), status)
-except Exception:
-    app = None
-
-
 def handler(request):
     headers = getattr(request, 'headers', {})
     auth = None
