@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Send, MessageSquare } from "lucide-react";
@@ -58,7 +58,7 @@ function ChatThread({ otherUserId, onBack }) {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const { data } = await api.get(`/messages/${otherUserId}`);
       setThread(data);
@@ -68,13 +68,13 @@ function ChatThread({ otherUserId, onBack }) {
     } catch {
       toast.error("Konuşma yüklenemedi");
     }
-  };
+  }, [otherUserId]);
 
   useEffect(() => {
     load();
     const id = setInterval(load, 5000);
     return () => clearInterval(id);
-  }, [otherUserId]);
+  }, [load]);
 
   const send = async (e) => {
     e?.preventDefault();
@@ -180,7 +180,7 @@ export default function Messages() {
     (async () => {
       try {
         const { data } = await api.get("/messages/conversations");
-        setList(data);
+        setList(Array.isArray(data) ? data : []);
       } finally {
         setLoading(false);
       }

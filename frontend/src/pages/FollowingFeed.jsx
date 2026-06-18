@@ -15,7 +15,7 @@ export default function FollowingFeed() {
     setLoading(true);
     try {
       const { data } = await api.get("/feed/following");
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Yüklenemedi");
     } finally {

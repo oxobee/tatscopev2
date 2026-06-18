@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: tattoomatch-backend
+    env: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    autoDeploy: true

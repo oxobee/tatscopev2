@@ -22,8 +22,9 @@ export default function FilterPopup({ open, onClose, value, onChange }) {
     onClose();
   };
 
-  const filtered = locs.all_provinces.filter((p) =>
-    p.toLocaleLowerCase("tr").includes(q.toLocaleLowerCase("tr"))
+  const safeProvinces = Array.isArray(locs.all_provinces) ? locs.all_provinces : [];
+  const filtered = safeProvinces.filter((p) =>
+    String(p).toLocaleLowerCase("tr").includes(q.toLocaleLowerCase("tr"))
   );
 
   return (
@@ -97,7 +98,7 @@ export default function FilterPopup({ open, onClose, value, onChange }) {
                 </div>
               )}
               {!q &&
-                locs.with_artists.map((l) => (
+                (Array.isArray(locs.with_artists) ? locs.with_artists : []).map((l) => (
                   <button
                     key={`a-${l.name}`}
                     data-testid={`filter-city-${l.name}`}

@@ -16,7 +16,8 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
   const [descExpanded, setDescExpanded] = useState(false);
   const tapRef = useRef({ last: 0, timer: null });
 
-  const tattoo = item.tattoos[tatIdx];
+  const tattoos = Array.isArray(item.tattoos) ? item.tattoos : [];
+  const tattoo = tattoos[tatIdx] || {};
 
   const triggerSave = async (showHeart = false) => {
     try {
@@ -76,7 +77,7 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
   };
 
   const goNext = () => {
-    if (tatIdx < item.tattoos.length - 1) {
+    if (tatIdx < tattoos.length - 1) {
       setDirection(1);
       setTatIdx(tatIdx + 1);
       setDescExpanded(false);
@@ -91,10 +92,10 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
   };
 
   const username =
-    item.artist.username ||
-    item.artist.email?.split("@")[0] ||
-    item.artist.name?.toLowerCase().replace(/\s+/g, "");
-  const location = item.artist.location || "İstanbul";
+    item.artist?.username ||
+    item.artist?.email?.split("@")[0] ||
+    item.artist?.name?.toLowerCase().replace(/\s+/g, "");
+  const location = item.artist?.location || "İstanbul";
 
   return (
     <div className="relative w-full h-full snap-start overflow-hidden bg-zinc-950" data-testid={`feed-card-${item.artist.user_id}`}>
@@ -183,9 +184,9 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
       </div>
 
       {/* Gallery dots */}
-      {item.tattoos.length > 1 && (
+      {tattoos.length > 1 && (
         <div className="absolute top-1/2 -translate-y-1/2 left-3 flex flex-col gap-1 z-20 md:hidden">
-          {item.tattoos.map((_, i) => (
+          {tattoos.map((_, i) => (
             <div
               key={i}
               className={`w-1 rounded-full transition-all ${
@@ -197,7 +198,7 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
       )}
 
       {/* Arrows */}
-      {item.tattoos.length > 1 && (
+      {tattoos.length > 1 && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); goPrev(); }}
@@ -209,7 +210,7 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); goNext(); }}
-            disabled={tatIdx === item.tattoos.length - 1}
+            disabled={tatIdx === tattoos.length - 1}
             className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass items-center justify-center disabled:opacity-30 z-20"
             data-testid={`gallery-next-${item.artist.user_id}`}
           >
@@ -334,15 +335,26 @@ export default function Discover() {
       const params = { exclude_following: true };
       if (filter.value && filter.value !== "all") params.q = filter.value;
       const { data } = await api.get("/feed", { params });
-      setItems(data);
+      setItems(
+        Array.isArray(data)
+          ? data.map((item) => ({
+              ...item,
+              tattoos: Array.isArray(item?.tattoos) ? item.tattoos : [],
+              artist: item?.artist || {},
+            }))
+          : [],
+      );
     } catch {
       toast.error("Akış yüklenemedi");
+      setItems([]);
     } finally {
       setLoading(false);
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleUpdate = (next) => {
     setItems((prev) => prev.map((p) => (p.artist.user_id === next.artist.user_id ? next : p)));
@@ -353,7 +365,7 @@ export default function Discover() {
     toast.message("Daha az göster", { description: item.artist.name });
   };
 
-  const visible = items.filter((i) => !hidden.has(i.artist.user_id));
+  const visible = items.filter((i) => Array.isArray(i.tattoos) && i.tattoos.length > 0 && !hidden.has(i.artist.user_id));
 
   return (
     <>

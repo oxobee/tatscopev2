@@ -14,6 +14,16 @@ import bcrypt
 import jwt
 import httpx
 import logging
+
+
+def get_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(
+            f"Missing required environment variable '{name}'. "
+            "Create backend/.env from backend/.env.example and set this value."
+        )
+    return value
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Literal
 from collections import Counter, defaultdict
@@ -24,9 +34,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 
 # ---------- Config ----------
-mongo_url = os.environ["MONGO_URL"]
+mongo_url = get_env("MONGO_URL")
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+db = client[get_env("DB_NAME")]
 
 JWT_ALGORITHM = "HS256"
 EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"

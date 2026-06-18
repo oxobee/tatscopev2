@@ -55,7 +55,7 @@ export default function RightPanel() {
             Dövme DNA'm
           </h3>
         </div>
-        {dna && dna.styles.length > 0 ? (
+        {dna && Array.isArray(dna.styles) && dna.styles.length > 0 ? (
           <div className="space-y-3">
             {dna.styles.slice(0, 3).map((s) => (
               <div key={s.name}>
@@ -88,7 +88,7 @@ export default function RightPanel() {
       </div>
 
       {/* Best matches */}
-      {dna && dna.matches && dna.matches.length > 0 && (
+      {dna && Array.isArray(dna.matches) && dna.matches.length > 0 && (
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Crown className="w-4 h-4 text-rose-400" />

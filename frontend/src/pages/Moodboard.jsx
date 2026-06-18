@@ -14,7 +14,7 @@ export default function Moodboard() {
     setLoading(true);
     try {
       const { data } = await api.get("/moodboard");
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Panom yüklenemedi");
     } finally {

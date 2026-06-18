@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -24,7 +24,7 @@ export default function ArtistProfile() {
   const [tattooViewer, setTattooViewer] = useState(null);
   const [reviewViewer, setReviewViewer] = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get(`/artists/${id}`);
@@ -36,9 +36,9 @@ export default function ArtistProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); }, [load]);
 
   const handleFollow = async () => {
     try {

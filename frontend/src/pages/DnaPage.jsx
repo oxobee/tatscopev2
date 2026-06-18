@@ -29,9 +29,22 @@ export default function DnaPage() {
           api.get("/users/me/reviews"),
           api.get("/follows/me"),
         ]);
-        setDna(dr.data);
-        setReviews(rr.data);
-        setVisits(fr.data);
+        const dnaPayload = dr.data ?? {};
+        setDna({
+          totals: {
+            likes: dnaPayload.totals?.likes ?? 0,
+            saves: dnaPayload.totals?.saves ?? 0,
+            follows: dnaPayload.totals?.follows ?? 0,
+          },
+          styles: Array.isArray(dnaPayload.styles) ? dnaPayload.styles : [],
+          colors: dnaPayload.colors ?? {},
+          sizes: dnaPayload.sizes ?? {},
+          top_tags: Array.isArray(dnaPayload.top_tags) ? dnaPayload.top_tags : [],
+          matches: Array.isArray(dnaPayload.matches) ? dnaPayload.matches : [],
+          ...dnaPayload,
+        });
+        setReviews(Array.isArray(rr.data) ? rr.data : []);
+        setVisits(Array.isArray(fr.data) ? fr.data : []);
       } finally {
         setLoading(false);
       }

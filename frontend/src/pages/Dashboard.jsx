@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Palette, Upload, Trash2, Plus, MapPin, Instagram, Phone, Edit, ShieldCheck, UserCheck, Mail,
@@ -288,7 +288,8 @@ export default function Dashboard() {
   const [tattoos, setTattoos] = useState([]);
   const [stats, setStats] = useState({ followers: 0, likes: 0, rating: 0 });
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!user?.user_id) return;
     try {
       const r = await api.get(`/artists/${user.user_id}`);
       setTattoos(r.data.tattoos);
@@ -298,9 +299,9 @@ export default function Dashboard() {
         likes: r.data.tattoos.reduce((s, t) => s + (t.like_count || 0), 0),
       });
     } catch {}
-  };
+  }, [user?.user_id]);
 
-  useEffect(() => { if (user) load(); }, [user]);
+  useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Bu dövmeyi silmek istediğine emin misin?")) return;
