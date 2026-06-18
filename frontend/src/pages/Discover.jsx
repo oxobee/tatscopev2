@@ -2,17 +2,18 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Heart, Bookmark, ThumbsDown, MapPin, MessageCircle, ChevronLeft, ChevronRight, SlidersHorizontal, UserPlus,
+  Heart, Bookmark, ThumbsDown, MapPin, ChevronLeft, ChevronRight, SlidersHorizontal, UserPlus, ChevronDown,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import FilterPopup from "@/components/FilterPopup";
 import FullscreenViewer from "@/components/FullscreenViewer";
 
-function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
+function ArtistCard({ item, onUpdate, onOpenViewer, onDislike, onOpenFilter }) {
   const [tatIdx, setTatIdx] = useState(0);
   const [heartPop, setHeartPop] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [descExpanded, setDescExpanded] = useState(false);
   const tapRef = useRef({ last: 0, timer: null });
 
   const tattoo = item.tattoos[tatIdx];
@@ -37,7 +38,6 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
   const handleTap = () => {
     const now = Date.now();
     if (now - tapRef.current.last < 320) {
-      // double tap
       if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
       tapRef.current.timer = null;
       tapRef.current.last = 0;
@@ -79,19 +79,27 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
     if (tatIdx < item.tattoos.length - 1) {
       setDirection(1);
       setTatIdx(tatIdx + 1);
+      setDescExpanded(false);
     }
   };
   const goPrev = () => {
     if (tatIdx > 0) {
       setDirection(-1);
       setTatIdx(tatIdx - 1);
+      setDescExpanded(false);
     }
   };
 
+  const username =
+    item.artist.username ||
+    item.artist.email?.split("@")[0] ||
+    item.artist.name?.toLowerCase().replace(/\s+/g, "");
+  const location = item.artist.location || "İstanbul";
+
   return (
-    <div className="relative w-full h-full snap-start overflow-hidden" data-testid={`feed-card-${item.artist.user_id}`}>
-      {/* Image with horizontal swipe */}
-      <div className="absolute inset-0 bg-zinc-900" onClick={handleTap}>
+    <div className="relative w-full h-full snap-start overflow-hidden bg-zinc-950" data-testid={`feed-card-${item.artist.user_id}`}>
+      {/* Vertical 9:16 image container — fills available space */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black" onClick={handleTap}>
         <AnimatePresence initial={false} custom={direction}>
           <motion.img
             key={tatIdx}
@@ -111,9 +119,10 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
             }}
             className="absolute inset-0 w-full h-full object-cover select-none"
             draggable={false}
+            style={{ aspectRatio: "9 / 16" }}
           />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/90 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/95 pointer-events-none" />
       </div>
 
       {/* Heart pop */}
@@ -133,64 +142,54 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 p-5 z-20">
-        <div className="flex items-center gap-3">
-          <Link
-            to={`/app/artist/${item.artist.user_id}`}
-            className="w-12 h-12 rounded-full bg-zinc-800 border-2 border-rose-500/40 overflow-hidden flex items-center justify-center"
-          >
-            {item.artist.picture ? (
-              <img src={item.artist.picture} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="font-display font-black text-zinc-100">
-                {item.artist.name?.[0]?.toUpperCase()}
-              </span>
-            )}
-          </Link>
-          <div className="flex-1 min-w-0">
-            <Link to={`/app/artist/${item.artist.user_id}`} className="block">
-              <div
-                className="font-display font-black text-zinc-50 text-base truncate"
-                data-testid={`artist-name-${item.artist.user_id}`}
-              >
-                {item.artist.name}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-zinc-300/80">
-                <MapPin className="w-3 h-3" />
-                <span className="truncate">
-                  {item.artist.location || item.artist.studio_name || "—"}
-                </span>
-              </div>
-            </Link>
-          </div>
+      {/* TOP: Short description (clickable to expand) + hashtags */}
+      <div className="absolute top-0 left-0 right-0 p-5 pt-7 z-20">
+        {tattoo.description && (
           <motion.button
-            whileTap={{ scale: 0.92 }}
-            data-testid={`follow-btn-${item.artist.user_id}`}
             onClick={(e) => {
               e.stopPropagation();
-              handleFollow();
+              setDescExpanded(!descExpanded);
             }}
-            className={`px-4 py-1.5 rounded-full text-xs font-display font-bold transition-all flex items-center gap-1 ${
-              item.is_following
-                ? "bg-zinc-900/70 text-zinc-300 border border-zinc-700"
-                : "bg-gradient-to-r from-rose-500 to-indigo-600 text-white glow-rose"
-            }`}
+            data-testid={`desc-toggle-${tattoo.tattoo_id}`}
+            className="w-full text-left mb-2"
+            layout
           >
-            <UserPlus className="w-3 h-3" />
-            {item.is_following ? "Takipte" : "Takip"}
+            <motion.p
+              layout
+              className={`text-sm text-zinc-100 leading-snug glass rounded-2xl px-3 py-2 border border-white/10 ${
+                descExpanded ? "" : "line-clamp-1"
+              }`}
+            >
+              {tattoo.description}
+              {!descExpanded && tattoo.description.length > 40 && (
+                <ChevronDown className="inline w-3 h-3 ml-1 opacity-60" />
+              )}
+            </motion.p>
           </motion.button>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-100 border border-rose-500/40 backdrop-blur-md">
+            #{tattoo.style}
+          </span>
+          {tattoo.tags?.slice(0, 4).map((t) => (
+            <span
+              key={t}
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-zinc-100 backdrop-blur-md"
+            >
+              #{t}
+            </span>
+          ))}
         </div>
       </div>
 
       {/* Gallery dots */}
       {item.tattoos.length > 1 && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 flex gap-1 z-20">
+        <div className="absolute top-1/2 -translate-y-1/2 left-3 flex flex-col gap-1 z-20 md:hidden">
           {item.tattoos.map((_, i) => (
             <div
               key={i}
-              className={`h-1 rounded-full transition-all ${
-                i === tatIdx ? "w-6 bg-rose-500" : "w-3 bg-white/30"
+              className={`w-1 rounded-full transition-all ${
+                i === tatIdx ? "h-6 bg-rose-500" : "h-3 bg-white/30"
               }`}
             />
           ))}
@@ -203,7 +202,7 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
           <button
             onClick={(e) => { e.stopPropagation(); goPrev(); }}
             disabled={tatIdx === 0}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass flex items-center justify-center disabled:opacity-30 z-20"
+            className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass items-center justify-center disabled:opacity-30 z-20"
             data-testid={`gallery-prev-${item.artist.user_id}`}
           >
             <ChevronLeft className="w-5 h-5 text-zinc-100" />
@@ -211,7 +210,7 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
           <button
             onClick={(e) => { e.stopPropagation(); goNext(); }}
             disabled={tatIdx === item.tattoos.length - 1}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass flex items-center justify-center disabled:opacity-30 z-20"
+            className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass items-center justify-center disabled:opacity-30 z-20"
             data-testid={`gallery-next-${item.artist.user_id}`}
           >
             <ChevronRight className="w-5 h-5 text-zinc-100" />
@@ -219,55 +218,83 @@ function ArtistCard({ item, onUpdate, onOpenViewer, onDislike }) {
         </>
       )}
 
-      {/* Bottom content */}
-      <div className="absolute bottom-0 left-0 right-0 p-5 pb-24 md:pb-5 z-20">
-        <div className="flex items-end gap-3">
-          <div className="flex-1 min-w-0">
-            {tattoo.description && (
-              <p className="text-sm text-zinc-200 mb-2 line-clamp-2">{tattoo.description}</p>
-            )}
-            <div className="flex flex-wrap gap-1.5">
-              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                {tattoo.style}
-              </span>
-              {tattoo.tags?.slice(0, 3).map((t) => (
-                <span key={t} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-zinc-200">
-                  #{t}
-                </span>
-              ))}
-            </div>
-          </div>
+      {/* RIGHT ACTION RAIL */}
+      <div className="absolute right-4 bottom-32 md:bottom-40 z-20 flex flex-col gap-3 items-center">
+        <ActionBtn
+          testid={`like-btn-${tattoo.tattoo_id}`}
+          icon={Heart}
+          active={tattoo.liked}
+          activeClass="fill-rose-500 text-rose-500"
+          count={tattoo.like_count}
+          onClick={handleLike}
+        />
+        <ActionBtn
+          testid={`save-btn-${tattoo.tattoo_id}`}
+          icon={Bookmark}
+          active={tattoo.saved}
+          activeClass="fill-rose-400 text-rose-400"
+          onClick={() => triggerSave(true)}
+        />
+        <ActionBtn
+          testid={`dislike-btn-${item.artist.user_id}`}
+          icon={ThumbsDown}
+          onClick={() => onDislike(item)}
+        />
+        {/* Filter button replaces message button */}
+        <ActionBtn
+          testid={`filter-action-btn`}
+          icon={SlidersHorizontal}
+          onClick={() => onOpenFilter()}
+        />
+      </div>
 
-          <div className="flex flex-col gap-2 items-center">
-            <ActionBtn
-              testid={`like-btn-${tattoo.tattoo_id}`}
-              icon={Heart}
-              active={tattoo.liked}
-              activeClass="fill-rose-500 text-rose-500"
-              count={tattoo.like_count}
-              onClick={handleLike}
-            />
-            <ActionBtn
-              testid={`save-btn-${tattoo.tattoo_id}`}
-              icon={Bookmark}
-              active={tattoo.saved}
-              activeClass="fill-rose-400 text-rose-400"
-              onClick={() => triggerSave(true)}
-            />
-            <ActionBtn
-              testid={`dislike-btn-${item.artist.user_id}`}
-              icon={ThumbsDown}
-              activeClass="text-zinc-300"
-              onClick={() => onDislike(item)}
-            />
-            <Link
-              to={`/app/artist/${item.artist.user_id}`}
-              data-testid={`view-artist-${item.artist.user_id}`}
-              className="w-12 h-12 rounded-full glass flex items-center justify-center hover:scale-110 transition-transform"
-            >
-              <MessageCircle className="w-5 h-5 text-zinc-100" />
-            </Link>
-          </div>
+      {/* BOTTOM: Artist row + Follow */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 md:pb-4 z-20">
+        <div className="flex items-center gap-3">
+          <Link
+            to={`/app/artist/${item.artist.user_id}`}
+            className="w-12 h-12 rounded-full bg-zinc-800 border-2 border-rose-500/40 overflow-hidden flex items-center justify-center flex-shrink-0"
+          >
+            {item.artist.picture ? (
+              <img src={item.artist.picture} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-display font-black text-zinc-100">
+                {item.artist.name?.[0]?.toUpperCase()}
+              </span>
+            )}
+          </Link>
+          <Link
+            to={`/app/artist/${item.artist.user_id}`}
+            className="flex-1 min-w-0"
+            data-testid={`artist-row-${item.artist.user_id}`}
+          >
+            <div className="font-display font-black text-zinc-50 text-base truncate leading-tight" data-testid={`artist-name-${item.artist.user_id}`}>
+              {item.artist.name}
+            </div>
+            <div className="text-xs text-zinc-400 truncate font-mono">
+              @{username}
+            </div>
+            <div className="flex items-center gap-1 text-[11px] text-zinc-300/80 mt-0.5">
+              <MapPin className="w-3 h-3" />
+              <span className="truncate">{location}</span>
+            </div>
+          </Link>
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            data-testid={`follow-btn-${item.artist.user_id}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleFollow();
+            }}
+            className={`px-4 py-2 rounded-full text-xs font-display font-bold transition-all flex items-center gap-1 flex-shrink-0 ${
+              item.is_following
+                ? "bg-zinc-900/70 text-zinc-300 border border-zinc-700"
+                : "bg-gradient-to-r from-rose-500 to-indigo-600 text-white glow-rose"
+            }`}
+          >
+            <UserPlus className="w-3 h-3" />
+            {item.is_following ? "Takipte" : "Takip Et"}
+          </motion.button>
         </div>
       </div>
     </div>
@@ -282,7 +309,7 @@ function ActionBtn({ testid, icon: Icon, active, activeClass, count, onClick }) 
         whileTap={{ scale: 0.85 }}
         whileHover={{ scale: 1.08 }}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="w-12 h-12 rounded-full glass flex items-center justify-center"
+        className="w-12 h-12 rounded-full glass flex items-center justify-center border border-white/10"
       >
         <Icon className={`w-5 h-5 transition-colors ${active ? activeClass : "text-zinc-100"}`} />
       </motion.button>
@@ -330,7 +357,7 @@ export default function Discover() {
 
   return (
     <>
-      {/* Filter pill */}
+      {/* Top filter chip (also accessible from right rail) */}
       <motion.button
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -338,10 +365,10 @@ export default function Discover() {
         whileTap={{ scale: 0.95 }}
         onClick={() => setFilterOpen(true)}
         data-testid="discover-filter-btn"
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-30 glass border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 shadow-lg"
+        className="absolute top-3 right-3 z-30 glass border border-white/10 rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-lg"
       >
-        <SlidersHorizontal className="w-3.5 h-3.5 text-rose-300" />
-        <span className="text-xs font-display font-bold text-zinc-100">{filter.label}</span>
+        <SlidersHorizontal className="w-3 h-3 text-rose-300" />
+        <span className="text-[11px] font-display font-bold text-zinc-100">{filter.label}</span>
       </motion.button>
 
       {loading ? (
@@ -362,6 +389,7 @@ export default function Discover() {
                 onUpdate={handleUpdate}
                 onOpenViewer={setViewer}
                 onDislike={handleDislike}
+                onOpenFilter={() => setFilterOpen(true)}
               />
             </div>
           ))}

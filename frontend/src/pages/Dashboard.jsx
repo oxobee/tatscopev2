@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import ProfilePicturePicker from "@/components/ProfilePicturePicker";
 
 const STYLES = [
   { v: "minimal", l: "Minimal" }, { v: "blackwork", l: "Blackwork" },
@@ -163,6 +164,15 @@ function StudioEditor({ user, onUpdate }) {
       <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display text-2xl">Studio Bilgileri</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div>
+            <Label className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5 block">
+              Profil Fotoğrafın
+            </Label>
+            <ProfilePicturePicker
+              value={form.picture}
+              onChange={(v) => setForm({ ...form, picture: v })}
+            />
+          </div>
           <Input data-testid="studio-name-input" placeholder="İsim" value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-zinc-900 border-zinc-800 text-zinc-100" />
           <Input data-testid="studio-studio-name-input" placeholder="Studio adı" value={form.studio_name}
@@ -175,8 +185,6 @@ function StudioEditor({ user, onUpdate }) {
             onChange={(e) => setForm({ ...form, instagram: e.target.value })} className="bg-zinc-900 border-zinc-800 text-zinc-100" />
           <Input data-testid="studio-contact-input" placeholder="İletişim" value={form.contact}
             onChange={(e) => setForm({ ...form, contact: e.target.value })} className="bg-zinc-900 border-zinc-800 text-zinc-100" />
-          <Input data-testid="studio-picture-input" placeholder="Profil fotoğrafı URL" value={form.picture}
-            onChange={(e) => setForm({ ...form, picture: e.target.value })} className="bg-zinc-900 border-zinc-800 text-zinc-100" />
           <Button data-testid="studio-save-btn" onClick={submit} disabled={saving}
             className="w-full h-11 rounded-full bg-gradient-to-r from-rose-500 to-indigo-600 text-white font-display font-bold">
             {saving ? "Kaydediliyor..." : "Kaydet"}
@@ -231,7 +239,7 @@ function VerifyClientDialog({ onVerified }) {
         </DialogHeader>
         <p className="text-xs text-zinc-500 leading-relaxed">
           Sadece sende dövme yaptıran kullanıcılar yorum ve puan verebilsin diye onları doğrulaman gerekir.
-          Müşterinin TattooMatch e-postasını gir.
+          Müşterinin TatScope e-postasını gir.
         </p>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -367,10 +375,11 @@ export default function Dashboard() {
           {tattoos.map((t) => (
             <motion.div
               key={t.tattoo_id} layout
-              className="aspect-square bg-zinc-900 rounded-xl overflow-hidden relative group"
+              className="relative bg-zinc-900 rounded-xl overflow-hidden group"
+              style={{ aspectRatio: "9 / 16" }}
               data-testid={`studio-tattoo-${t.tattoo_id}`}
             >
-              <img src={t.image} alt="" className="w-full h-full object-cover" />
+              <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
               <button
                 onClick={() => handleDelete(t.tattoo_id)}
                 data-testid={`studio-delete-${t.tattoo_id}`}

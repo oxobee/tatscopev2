@@ -10,7 +10,6 @@ export default function Splash() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    // After loading, if user is logged in, send them to /app/discover
     if (!loading && user) {
       const t = setTimeout(() => navigate("/app/discover"), 1400);
       return () => clearTimeout(t);
@@ -45,10 +44,14 @@ export default function Splash() {
               Dövme · Eşleşme · Sanat
             </span>
           </div>
-          <h1 className="font-display text-6xl sm:text-7xl font-black tracking-tight">
-            <span className="text-gradient">Tattoo</span>
-            <span className="text-zinc-50">Match</span>
-          </h1>
+          <motion.img
+            src="/logo.png"
+            alt="TatScope"
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.7 }}
+            className="mx-auto max-w-[300px] w-full brightness-125 drop-shadow-2xl"
+          />
           <p className="mt-6 text-zinc-400 text-base leading-relaxed max-w-sm mx-auto">
             Dövme sanatçısı bulmanın yeni yolu. Kaydır, beğen, kaydet — kendi
             stilini keşfet.
@@ -81,7 +84,7 @@ export default function Splash() {
           </Button>
         )}
         <p className="text-center text-xs text-zinc-600 font-mono pt-4">
-          v1.0 · İstanbul
+          v2.1 · İstanbul · PWA
         </p>
       </motion.div>
     </div>

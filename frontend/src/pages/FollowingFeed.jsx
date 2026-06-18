@@ -114,9 +114,15 @@ export default function FollowingFeed() {
                 </div>
               </Link>
 
-              {/* Image */}
-              <button onClick={() => setViewer(it.tattoo)} className="w-full block">
-                <img src={it.tattoo.image} alt="" className="w-full max-h-[420px] object-cover" />
+              {/* Image — vertical 9:16 aspect */}
+              <button onClick={() => setViewer(it.tattoo)} className="w-full block bg-black">
+                <div className="relative w-full" style={{ aspectRatio: "9 / 16" }}>
+                  <img
+                    src={it.tattoo.image}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
               </button>
 
               {/* Actions */}

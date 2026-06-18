@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import ProfilePicturePicker from "@/components/ProfilePicturePicker";
 
 export default function SettingsDialog({ trigger }) {
   const { user, setUser } = useAuth();
@@ -112,10 +113,11 @@ export default function SettingsDialog({ trigger }) {
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 rows={3} className="bg-zinc-900 border-zinc-800" />
             </Field>
-            <Field label="Profil Fotoğrafı URL">
-              <Input data-testid="settings-picture" value={form.picture}
-                onChange={(e) => setForm({ ...form, picture: e.target.value })}
-                className="bg-zinc-900 border-zinc-800" />
+            <Field label="Profil Fotoğrafı">
+              <ProfilePicturePicker
+                value={form.picture}
+                onChange={(v) => setForm({ ...form, picture: v })}
+              />
             </Field>
             <Button onClick={submit} disabled={saving} data-testid="settings-save-profile"
               className="w-full h-11 rounded-full bg-gradient-to-r from-rose-500 to-indigo-600 text-white font-display font-bold">

@@ -79,12 +79,14 @@ export default function Moodboard() {
               className="break-inside-avoid relative group rounded-2xl overflow-hidden bg-zinc-900"
               data-testid={`moodboard-item-${tattoo.tattoo_id}`}
             >
-              <img
-                src={tattoo.image}
-                alt=""
-                className="w-full block cursor-pointer"
-                onClick={() => setViewer(tattoo)}
-              />
+              <div className="relative w-full" style={{ aspectRatio: "9 / 16" }}>
+                <img
+                  src={tattoo.image}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover cursor-pointer"
+                  onClick={() => setViewer(tattoo)}
+                />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                 <Link
                   to={`/app/artist/${artist?.user_id}`}

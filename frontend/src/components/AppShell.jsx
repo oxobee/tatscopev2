@@ -41,9 +41,8 @@ export default function AppShell() {
     >
       {/* Desktop sidebar */}
       <aside className="hidden md:flex border-r border-zinc-900 p-6 flex-col h-screen">
-        <Link to="/app/discover" className="font-display text-3xl font-black tracking-tight mb-10">
-          <span className="text-gradient">Tattoo</span>
-          <span className="text-zinc-50">Match</span>
+        <Link to="/app/discover" className="block mb-10" data-testid="sidebar-logo">
+          <img src="/logo.png" alt="TatScope" className="h-9 object-contain object-left brightness-125" />
         </Link>
         <nav className="space-y-1 flex-1">
           {NAV.map((item) => {

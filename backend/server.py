@@ -34,7 +34,7 @@ EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/ses
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("tattoomatch")
 
-app = FastAPI(title="TattooMatch API")
+app = FastAPI(title="TatScope API")
 api = APIRouter(prefix="/api")
 
 
@@ -974,7 +974,7 @@ async def locations():
 # ---------- Health ----------
 @api.get("/")
 async def root():
-    return {"name": "TattooMatch", "status": "ok"}
+    return {"name": "TatScope", "status": "ok"}
 
 
 # Mount router

@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import Splash from "@/pages/Splash";
 import Onboarding from "@/pages/Onboarding";
 import Login from "@/pages/Login";
@@ -70,6 +71,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <RootRouter />
+          <PWAInstallPrompt />
           <Toaster theme="dark" position="top-right" toastOptions={{ duration: 2500 }} offset={20} />
         </AuthProvider>
       </BrowserRouter>

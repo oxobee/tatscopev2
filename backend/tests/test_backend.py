@@ -18,7 +18,7 @@ class TestHealth:
         assert r.status_code == 200
         data = r.json()
         assert data.get("status") == "ok"
-        assert data.get("name") == "TattooMatch"
+        assert data.get("name") == "TatScope"
 
 
 # ---------- Auth ----------

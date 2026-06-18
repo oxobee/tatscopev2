@@ -232,10 +232,11 @@ export default function ArtistProfile() {
                 whileTap={{ scale: 0.97 }}
                 whileHover={{ scale: 1.02 }}
                 onClick={() => setTattooViewer(t)}
-                className="aspect-square bg-zinc-900 rounded-xl overflow-hidden"
+                className="relative bg-zinc-900 rounded-xl overflow-hidden"
+                style={{ aspectRatio: "9 / 16" }}
                 data-testid={`portfolio-item-${t.tattoo_id}`}
               >
-                <img src={t.image} alt="" className="w-full h-full object-cover" />
+                <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
               </motion.button>
             ))}
             {tattoos.length === 0 && (
