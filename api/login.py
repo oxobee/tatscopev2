@@ -11,6 +11,6 @@ def handler(request):
     except Exception:
         return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid json"})}
     # defer to implementation
-    from api.auth_login_impl import do_login
+    from server_impl.auth_login_impl import do_login
     status, data = do_login(body)
     return {"statusCode": status, "headers": {"Content-Type": "application/json"}, "body": json.dumps(data)}

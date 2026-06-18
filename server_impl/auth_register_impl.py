@@ -3,14 +3,6 @@ import json
 from hashlib import sha256
 
 
-def json_response(obj, status=200):
-    return {
-        "statusCode": status,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(obj),
-    }
-
-
 _client = None
 _db = None
 

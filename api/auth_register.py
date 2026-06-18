@@ -18,6 +18,6 @@ def handler(request):
             body = json.loads(raw)
     except Exception:
         return json_response({"error": "invalid json"}, status=400)
-    from api.auth_register_impl import do_register
+    from server_impl.auth_register_impl import do_register
     status, data = do_register(body)
     return json_response(data, status=status)
