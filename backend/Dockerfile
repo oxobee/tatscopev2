@@ -10,8 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.render.txt ./requirements.render.txt
+COPY requirements.txt ./requirements.txt
+RUN if [ -f requirements.render.txt ]; then \
+            pip install --no-cache-dir -r requirements.render.txt; \
+        else \
+            pip install --no-cache-dir -r requirements.txt; \
+        fi
 
 # Copy backend sources
 COPY . .
