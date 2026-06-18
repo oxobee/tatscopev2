@@ -1,10 +1,10 @@
-from flask import Flask, jsonify
-
-app = Flask(__name__)
+import json
 
 
-@app.route("/", methods=["GET"]) 
-@app.route('/<path:_>', methods=['GET'])
-def health(_=""):
-    return jsonify({"name": "TatScope", "status": "ok"})
+def handler(request):
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"name": "TatScope", "status": "ok"}),
+    }
 
