@@ -1,2 +1,3 @@
-def handler(request):
-    return {"statusCode": 200, "body": "hello"}
+def app(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/plain')])
+    return [b'hello']
