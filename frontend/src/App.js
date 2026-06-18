@@ -70,7 +70,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <RootRouter />
-          <Toaster theme="dark" position="top-center" />
+          <Toaster theme="dark" position="top-right" toastOptions={{ duration: 2500 }} offset={20} />
         </AuthProvider>
       </BrowserRouter>
     </div>

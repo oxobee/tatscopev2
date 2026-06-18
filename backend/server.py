@@ -861,6 +861,8 @@ async def verify_client(body: VerifyClientIn, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Bu email ile kayıtlı kullanıcı yok")
     if target["user_id"] == user["user_id"]:
         raise HTTPException(status_code=400, detail="Kendinizi doğrulayamazsınız")
+    if target.get("role") != "user":
+        raise HTTPException(status_code=400, detail="Sadece normal kullanıcılar müşteri olarak doğrulanabilir")
     existing = await db.verified_clients.find_one(
         {"artist_id": user["user_id"], "user_id": target["user_id"]}
     )
