@@ -4,8 +4,6 @@
     { "src": "api/*.py", "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/api/auth_login", "dest": "/api/login.py" },
-    { "src": "/api/auth_login/", "dest": "/api/login.py" },
-    { "src": "/api/(.*)", "dest": "/api/$1.py" }
+    { "src": "/api/(.*)", "dest": "/api/serve.py" }
   ]
 }
