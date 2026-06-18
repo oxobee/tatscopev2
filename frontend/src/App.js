@@ -13,8 +13,8 @@ import Moodboard from "@/pages/Moodboard";
 import DnaPage from "@/pages/DnaPage";
 import ArtistProfile from "@/pages/ArtistProfile";
 import Dashboard from "@/pages/Dashboard";
-import Following from "@/pages/Following";
-import ProfilePage from "@/pages/ProfilePage";
+import FollowingFeed from "@/pages/FollowingFeed";
+import Messages from "@/pages/Messages";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -31,7 +31,6 @@ function Protected({ children }) {
 
 function RootRouter() {
   const location = useLocation();
-  // Emergent OAuth callback handler — process #session_id BEFORE other routing
   if (location.hash && location.hash.includes("session_id=")) {
     return <AuthCallback />;
   }
@@ -52,10 +51,11 @@ function RootRouter() {
       >
         <Route index element={<Navigate to="/app/discover" replace />} />
         <Route path="discover" element={<Discover />} />
+        <Route path="following-feed" element={<FollowingFeed />} />
         <Route path="moodboard" element={<Moodboard />} />
         <Route path="dna" element={<DnaPage />} />
-        <Route path="following" element={<Following />} />
-        <Route path="me" element={<ProfilePage />} />
+        <Route path="messages" element={<Messages />} />
+        <Route path="messages/:userId" element={<Messages />} />
         <Route path="artist/:id" element={<ArtistProfile />} />
         <Route path="studio" element={<Dashboard />} />
       </Route>

@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Compass, Bookmark, Brain, User, LogOut, Palette, Users,
+  Compass, Bookmark, Brain, Palette, Heart, MessageSquare, LogOut,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,18 +9,18 @@ import RightPanel from "@/components/RightPanel";
 
 const NAV_USER = [
   { to: "/app/discover", icon: Compass, label: "Keşfet", testid: "nav-discover" },
+  { to: "/app/following-feed", icon: Heart, label: "Takip", testid: "nav-following" },
   { to: "/app/moodboard", icon: Bookmark, label: "Panom", testid: "nav-moodboard" },
+  { to: "/app/messages", icon: MessageSquare, label: "Mesaj", testid: "nav-messages" },
   { to: "/app/dna", icon: Brain, label: "Dövme DNA'm", testid: "nav-dna" },
-  { to: "/app/following", icon: Users, label: "Takip", testid: "nav-following" },
-  { to: "/app/me", icon: User, label: "Profil", testid: "nav-profile" },
 ];
 
 const NAV_ARTIST = [
   { to: "/app/discover", icon: Compass, label: "Keşfet", testid: "nav-discover" },
   { to: "/app/studio", icon: Palette, label: "Stüdyom", testid: "nav-studio" },
   { to: "/app/moodboard", icon: Bookmark, label: "Panom", testid: "nav-moodboard" },
+  { to: "/app/messages", icon: MessageSquare, label: "Mesaj", testid: "nav-messages" },
   { to: "/app/dna", icon: Brain, label: "Dövme DNA'm", testid: "nav-dna" },
-  { to: "/app/me", icon: User, label: "Profil", testid: "nav-profile" },
 ];
 
 export default function AppShell() {
@@ -35,8 +35,11 @@ export default function AppShell() {
   };
 
   return (
-    <div className="h-screen bg-zinc-950 relative flex flex-col md:grid md:grid-cols-[256px_minmax(0,1fr)_320px]" data-testid="app-shell">
-      {/* Left sidebar — desktop only */}
+    <div
+      className="h-screen bg-zinc-950 relative flex flex-col md:grid md:grid-cols-[256px_minmax(0,1fr)_320px]"
+      data-testid="app-shell"
+    >
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex border-r border-zinc-900 p-6 flex-col h-screen">
         <Link to="/app/discover" className="font-display text-3xl font-black tracking-tight mb-10">
           <span className="text-gradient">Tattoo</span>
@@ -71,7 +74,7 @@ export default function AppShell() {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-zinc-900">
-          <div className="flex items-center gap-3 p-2">
+          <Link to="/app/dna" className="flex items-center gap-3 p-2 rounded-xl hover:bg-zinc-900/60 transition-colors">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-indigo-600 flex items-center justify-center font-display font-black text-white text-sm overflow-hidden">
               {user?.picture ? (
                 <img src={user.picture} alt="" className="w-full h-full object-cover" />
@@ -91,31 +94,38 @@ export default function AppShell() {
               data-testid="logout-btn"
               size="icon"
               variant="ghost"
-              onClick={handleLogout}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleLogout();
+              }}
               className="text-zinc-500 hover:text-rose-400"
             >
               <LogOut className="w-4 h-4" />
             </Button>
-          </div>
+          </Link>
         </div>
       </aside>
 
-      {/* Center main — single Outlet */}
-      <main className="flex-1 overflow-hidden flex justify-center bg-zinc-950 min-h-0">
+      {/* Center main */}
+      <main className="flex-1 overflow-hidden flex justify-center bg-zinc-950 min-h-0 relative">
         <div className="w-full md:max-w-[480px] h-full overflow-hidden">
           <Outlet />
         </div>
       </main>
 
-      {/* Right panel — desktop only */}
+      {/* Desktop right panel */}
       <aside className="hidden md:block border-l border-zinc-900 overflow-y-auto p-6 h-screen">
         <RightPanel />
       </aside>
 
-      {/* Bottom nav — mobile only */}
-      <nav
+      {/* Mobile floating popup nav */}
+      <motion.nav
         data-testid="bottom-nav"
-        className="md:hidden glass border-t border-white/5 px-2 py-2 flex items-center justify-around z-30"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 280, damping: 28 }}
+        className="md:hidden fixed bottom-4 left-4 right-4 z-40 glass border border-white/10 rounded-full px-2 py-2 flex items-center justify-around shadow-2xl"
       >
         {NAV.map((item) => {
           const Icon = item.icon;
@@ -125,14 +135,23 @@ export default function AppShell() {
               key={item.to}
               to={item.to}
               data-testid={`mobile-${item.testid}`}
-              className="flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl min-w-[56px]"
+              className="relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-full min-w-[52px]"
             >
+              {active && (
+                <motion.span
+                  layoutId="mobile-nav-pill"
+                  className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-500/30 to-indigo-600/30 border border-white/10"
+                  transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                />
+              )}
               <Icon
-                className={`w-5 h-5 ${active ? "text-rose-400" : "text-zinc-500"}`}
+                className={`relative w-5 h-5 transition-colors ${
+                  active ? "text-rose-300" : "text-zinc-400"
+                }`}
               />
               <span
-                className={`text-[10px] font-bold tracking-wide ${
-                  active ? "text-zinc-100" : "text-zinc-600"
+                className={`relative text-[9px] font-bold tracking-wide ${
+                  active ? "text-zinc-50" : "text-zinc-500"
                 }`}
               >
                 {item.label}
@@ -140,7 +159,7 @@ export default function AppShell() {
             </Link>
           );
         })}
-      </nav>
+      </motion.nav>
     </div>
   );
 }

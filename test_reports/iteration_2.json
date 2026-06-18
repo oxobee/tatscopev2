@@ -1,0 +1,62 @@
+{
+  "summary": "v2 backend + frontend testing for TattooMatch (reviews, verify-client, messages, locations, feed filters, following-feed, settings, password, filter popup, fullscreen viewer). 32/32 backend pytest tests pass (11 new v2 + 21 regression). Frontend: 18/23 UI checks pass; key v2 flows verified (login, discover dislike, gallery prev/next, sidebar without Profil, following-feed page, DNA hero-settings, messages page, artist verification-banner, portfolio fullscreen-viewer, mobile floating pill nav). Remaining issues are inconsistent popup opening that likely stems from the welcome toast overlapping the filter button area on first load.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "FilterPopup",
+        "issue": "Clicking discover-filter-btn does not always open the popup in automated runs. The 'Hoş geldin, Demo Kullanıcı' toast renders directly above the artist header bar and may intercept the first click on the floating filter button on Discover. Reproduction: login -> discover -> immediately click discover-filter-btn -> popup absent from DOM (no 'Yakınımdakiler', no filter-search-input, no filter-province-* in HTML).",
+        "selector": "[data-testid=discover-filter-btn]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "SettingsDialog",
+        "issue": "Same intermittent open behavior on /app/dna: clicking [data-testid=hero-settings] sometimes does not render Radix Tabs ('Profil', 'Hesap', 'Şifre' missing from DOM, role=tab count = 0). In an earlier run the settings-save-profile button WAS found, so the dialog can open — but it is not reliably reachable. Likely the same toast/animation timing root cause.",
+        "selector": "[data-testid=hero-settings]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Discover desktop",
+        "issues": ["Welcome toast ('Hoş geldin, Demo Kullanıcı') overlaps the artist header area near filter button — consider z-index lower or position 'bottom' to avoid pointer-event conflicts."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backend_v2.py",
+    "/app/backend/tests/test_backend.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/results_v2.xml"
+  ],
+  "action_items": [
+    "Investigate why FilterPopup/SettingsDialog occasionally do not mount on first click — most likely the success toast overlay intercepts pointer events. Move toaster to bottom or reduce z-index, OR delay toast until after first user interaction.",
+    "Optional: dedupe duplicate data-testid values (rating-star-1..5 etc., already flagged in iteration_1)."
+  ],
+  "critical_code_review_comments": [
+    "Backend server.py grown to ~1030 lines — strongly recommend splitting into routers/auth.py, routers/artists.py, routers/reviews.py, routers/messages.py, routers/dna.py for maintainability.",
+    "/api/feed iterates artists with N+1 queries (likes/saves/follows counted per tattoo). Acceptable at current scale (9 artists). Consider $lookup aggregation pipeline before scaling.",
+    "verify_client endpoint normalizes the email but does not check if the target is an artist (artist could verify another artist). Low-risk edge case; consider adding role='user' filter on target lookup.",
+    "Reviews allow optional photo as base64 — same DB-bloat concern as tattoos. Document limit and consider object storage.",
+    "/api/users/me/reviews returns artist with projection {name, picture, studio_name} (no user_id). Frontend may need artist_id (already in review.artist_id) — verify Messages/DNA links use review.artist_id not review.artist.user_id."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_backend_v2.py (new, 11 tests)",
+    "/app/test_reports/iteration_2.json (new)",
+    "/app/test_reports/pytest/results_v2.xml (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (32/32 — 11 new v2 + 21 regression)",
+    "frontend": "78% (18/23 ui assertions). Confirmed working: login, dislike, gallery prev/next, sidebar (no Profil), following-feed-page testid, hero-settings exists, messages page loads, verification-banner shows, portfolio-item -> fullscreen-viewer, mobile floating pill nav (rounded-full, fixed bottom-4, glass). Intermittent: FilterPopup and SettingsDialog opening on first click."
+  },
+  "test_credentials": "demo@user.com/Demo1234! (user); deniz@inkstudio.com/Artist123! (artist); plus 5 other artist accounts. Source: /app/memory/test_credentials.md.",
+  "seed_data_creation": "Each test creates TEST_-prefixed users (TEST_user_*, TEST_artist_*, TEST_rev_*, TEST_ff_*, TEST_pw_*, TEST_dna_*) for register/review/password/following scenarios. Verified-client records created in test_full_review_flow but reviews are cleaned up; verified_clients row remains (one per fresh user, harmless).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend v2 regression at /app/backend/tests/test_backend_v2.py covers /locations, /feed (q+exclude_following), /feed/following, /artists/me/verify-client (incl. non-artist 403 and nonexistent email 404), /artists/{id}/reviews (gated, empty-fields 400, success with stars-only / text+photo), /artists/{id} is_verified_client flag, /users/me/reviews, /messages POST+GET+conversations, /users/me with username/phone/birthday/location, /users/me/password (wrong-current 401 + change roundtrip). Run all: cd /app && REACT_APP_BACKEND_URL=https://artist-ink-27.preview.emergentagent.com python -m pytest backend/tests/ -v. Frontend bottom nav rendered as 'md:hidden fixed bottom-4 left-4 right-4 rounded-full glass' — confirmed floating pill design. Two popup intermittency issues remain (FilterPopup, SettingsDialog) — likely toast overlay interference.",
+  "rca_of_the_issue": "FilterPopup/SettingsDialog intermittent failure RCA: Both are mounted in DOM only when their parent's `open` state becomes true. Pages display a Sonner/shadcn toast on first arrival ('Hoş geldin, Demo Kullanıcı'). The toast container appears to render in the top-right and overlays the trigger buttons during the first ~3s. In runs where the welcome toast is still visible, the click on the trigger button is intercepted (no React state change), so the popup never opens. Mitigation suggestions: (a) lower z-index of toaster, (b) move toaster position to bottom-right, (c) reduce toast duration, or (d) gate toast on a route param so it doesn't fire on every navigation. Manually visible portfolio click does open the fullscreen-viewer reliably (after toast has dismissed), confirming the dialogs themselves work."
+}

@@ -184,12 +184,34 @@ class UserOut(BaseModel):
 
 class ArtistUpdate(BaseModel):
     name: Optional[str] = None
+    username: Optional[str] = None
     bio: Optional[str] = None
     location: Optional[str] = None
     instagram: Optional[str] = None
     contact: Optional[str] = None
     studio_name: Optional[str] = None
     picture: Optional[str] = None
+    phone: Optional[str] = None
+    birthday: Optional[str] = None
+
+
+class PasswordChangeIn(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class ReviewIn(BaseModel):
+    text: Optional[str] = Field(default=None, max_length=800)
+    stars: Optional[int] = Field(default=None, ge=1, le=5)
+    photo: Optional[str] = None  # base64 image, optional
+
+
+class VerifyClientIn(BaseModel):
+    email: EmailStr
+
+
+class MessageIn(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
 
 
 class TattooIn(BaseModel):
@@ -223,12 +245,15 @@ async def register(body: RegisterIn, response: Response):
         "password_hash": hash_password(body.password),
         "name": body.name.strip(),
         "role": body.role,
+        "username": None,
         "picture": None,
         "bio": None,
         "location": None,
         "instagram": None,
         "contact": None,
         "studio_name": None,
+        "phone": None,
+        "birthday": None,
         "auth_provider": "password",
         "created_at": now_utc().isoformat(),
     }
@@ -369,23 +394,32 @@ async def get_artist(artist_id: str, viewer=Depends(get_optional_user)):
     for t in tattoos:
         t["like_count"] = await db.likes.count_documents({"tattoo_id": t["tattoo_id"]})
     follower_count = await db.follows.count_documents({"artist_id": artist_id})
-    ratings = await db.ratings.find({"artist_id": artist_id}, {"_id": 0}).to_list(1000)
-    rating_avg = round(sum(r["stars"] for r in ratings) / len(ratings), 1) if ratings else 0.0
+    # Aggregate rating from REVIEWS (preferred) + legacy ratings collection
+    reviews = await db.reviews.find({"artist_id": artist_id}, {"_id": 0}).to_list(1000)
+    star_reviews = [r for r in reviews if r.get("stars")]
+    legacy = await db.ratings.find({"artist_id": artist_id}, {"_id": 0}).to_list(1000)
+    all_stars = [r["stars"] for r in star_reviews] + [r["stars"] for r in legacy]
+    rating_avg = round(sum(all_stars) / len(all_stars), 1) if all_stars else 0.0
     is_following = False
     my_rating = None
+    is_verified_client = False
     if viewer:
         is_following = bool(await db.follows.find_one({"follower_id": viewer["user_id"], "artist_id": artist_id}))
         rdoc = await db.ratings.find_one({"artist_id": artist_id, "user_id": viewer["user_id"]}, {"_id": 0})
         if rdoc:
             my_rating = rdoc["stars"]
+        is_verified_client = bool(await db.verified_clients.find_one(
+            {"artist_id": artist_id, "user_id": viewer["user_id"]}
+        ))
     return {
         "artist": a,
         "tattoos": tattoos,
         "follower_count": follower_count,
         "rating_avg": rating_avg,
-        "rating_count": len(ratings),
+        "rating_count": len(all_stars),
         "is_following": is_following,
         "my_rating": my_rating,
+        "is_verified_client": is_verified_client,
     }
 
 
@@ -403,35 +437,74 @@ async def update_artist_profile(body: ArtistUpdate, user=Depends(get_current_use
 @api.put("/users/me")
 async def update_user_profile(body: ArtistUpdate, user=Depends(get_current_user)):
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
-    # Non-artists can only update name/picture/bio/location
-    if user["role"] != "artist":
-        updates = {k: v for k, v in updates.items() if k in {"name", "picture", "bio", "location"}}
+    # All authenticated users can update these profile fields
+    allowed = {"name", "username", "picture", "bio", "location", "phone", "birthday"}
+    if user["role"] == "artist":
+        allowed |= {"instagram", "contact", "studio_name"}
+    updates = {k: v for k, v in updates.items() if k in allowed}
     if updates:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": updates})
     updated = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "password_hash": 0})
     return updated
 
 
+@api.put("/users/me/password")
+async def change_password(body: PasswordChangeIn, user=Depends(get_current_user)):
+    full = await db.users.find_one({"user_id": user["user_id"]})
+    if not full or not full.get("password_hash"):
+        raise HTTPException(status_code=400, detail="Bu hesap için şifre değiştirilemez")
+    if not verify_password(body.current_password, full["password_hash"]):
+        raise HTTPException(status_code=401, detail="Mevcut şifre yanlış")
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"password_hash": hash_password(body.new_password)}},
+    )
+    return {"ok": True}
+
+
 # ---------- Tattoo Endpoints ----------
 @api.get("/feed")
-async def feed(limit: int = 30, viewer=Depends(get_optional_user)):
-    """Return artists with their tattoos, ordered by recent activity."""
-    artists = await db.users.find({"role": "artist"}, {"_id": 0, "password_hash": 0}).to_list(200)
+async def feed(
+    limit: int = 30,
+    exclude_following: bool = False,
+    q: Optional[str] = None,
+    viewer=Depends(get_optional_user),
+):
+    """Return artists with their tattoos. Optional location filter (q) and exclude_following.
+
+    'q' supports special value 'nearby' which falls back to viewer.location when set.
+    """
+    query = {"role": "artist"}
+    if q == "nearby" and viewer and viewer.get("location"):
+        # Match first word of viewer's location (e.g. 'İstanbul' from 'Beyoğlu, İstanbul')
+        token = viewer["location"].split(",")[-1].strip()
+        query["location"] = {"$regex": token, "$options": "i"}
+    elif q and q not in ("nearby", "all", ""):
+        query["location"] = {"$regex": q, "$options": "i"}
+
+    artists = await db.users.find(query, {"_id": 0, "password_hash": 0}).to_list(500)
+
+    following_ids = set()
+    if viewer:
+        follows = await db.follows.find({"follower_id": viewer["user_id"]}, {"_id": 0}).to_list(1000)
+        following_ids = {f["artist_id"] for f in follows}
+
     items = []
+    liked_ids = set()
+    saved_ids = set()
+    if viewer:
+        likes = await db.likes.find({"user_id": viewer["user_id"]}, {"_id": 0, "tattoo_id": 1}).to_list(2000)
+        saves = await db.saves.find({"user_id": viewer["user_id"]}, {"_id": 0, "tattoo_id": 1}).to_list(2000)
+        liked_ids = {x["tattoo_id"] for x in likes}
+        saved_ids = {x["tattoo_id"] for x in saves}
+
     for a in artists:
+        if exclude_following and a["user_id"] in following_ids:
+            continue
         tattoos = await db.tattoos.find({"artist_id": a["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(20)
         if not tattoos:
             continue
         follower_count = await db.follows.count_documents({"artist_id": a["user_id"]})
-        is_following = False
-        liked_ids = set()
-        saved_ids = set()
-        if viewer:
-            is_following = bool(await db.follows.find_one({"follower_id": viewer["user_id"], "artist_id": a["user_id"]}))
-            likes = await db.likes.find({"user_id": viewer["user_id"]}, {"_id": 0, "tattoo_id": 1}).to_list(1000)
-            saves = await db.saves.find({"user_id": viewer["user_id"]}, {"_id": 0, "tattoo_id": 1}).to_list(1000)
-            liked_ids = {x["tattoo_id"] for x in likes}
-            saved_ids = {x["tattoo_id"] for x in saves}
         for t in tattoos:
             t["like_count"] = await db.likes.count_documents({"tattoo_id": t["tattoo_id"]})
             t["liked"] = t["tattoo_id"] in liked_ids
@@ -440,11 +513,35 @@ async def feed(limit: int = 30, viewer=Depends(get_optional_user)):
             "artist": a,
             "tattoos": tattoos,
             "follower_count": follower_count,
-            "is_following": is_following,
+            "is_following": a["user_id"] in following_ids,
         })
-    # Sort artists by most recent tattoo
     items.sort(key=lambda x: x["tattoos"][0]["created_at"] if x["tattoos"] else "", reverse=True)
     return items[:limit]
+
+
+@api.get("/feed/following")
+async def following_feed(limit: int = 60, user=Depends(get_current_user)):
+    """Return individual tattoos from artists the user follows, newest first."""
+    follows = await db.follows.find({"follower_id": user["user_id"]}, {"_id": 0}).to_list(1000)
+    artist_ids = [f["artist_id"] for f in follows]
+    if not artist_ids:
+        return []
+    tattoos = await db.tattoos.find({"artist_id": {"$in": artist_ids}}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    liked = await db.likes.find({"user_id": user["user_id"]}, {"_id": 0, "tattoo_id": 1}).to_list(2000)
+    saved = await db.saves.find({"user_id": user["user_id"]}, {"_id": 0, "tattoo_id": 1}).to_list(2000)
+    liked_ids = {x["tattoo_id"] for x in liked}
+    saved_ids = {x["tattoo_id"] for x in saved}
+    artist_cache = {}
+    items = []
+    for t in tattoos:
+        t["like_count"] = await db.likes.count_documents({"tattoo_id": t["tattoo_id"]})
+        t["liked"] = t["tattoo_id"] in liked_ids
+        t["saved"] = t["tattoo_id"] in saved_ids
+        aid = t["artist_id"]
+        if aid not in artist_cache:
+            artist_cache[aid] = await db.users.find_one({"user_id": aid}, {"_id": 0, "password_hash": 0})
+        items.append({"tattoo": t, "artist": artist_cache[aid]})
+    return items
 
 
 @api.post("/tattoos")
@@ -692,6 +789,186 @@ async def tattoo_dna(user=Depends(get_current_user)):
     }
 
 
+# ---------- Reviews (verified-client-only rich comments) ----------
+@api.get("/artists/{artist_id}/reviews")
+async def list_reviews(artist_id: str):
+    reviews = await db.reviews.find({"artist_id": artist_id}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    for r in reviews:
+        u = await db.users.find_one({"user_id": r["user_id"]}, {"_id": 0, "name": 1, "picture": 1})
+        r["user_name"] = (u or {}).get("name", "Bilinmeyen")
+        r["user_picture"] = (u or {}).get("picture")
+    return reviews
+
+
+@api.post("/artists/{artist_id}/reviews")
+async def add_review(artist_id: str, body: ReviewIn, user=Depends(get_current_user)):
+    a = await db.users.find_one({"user_id": artist_id, "role": "artist"})
+    if not a:
+        raise HTTPException(status_code=404, detail="Sanatçı bulunamadı")
+    # Must be a verified client
+    verified = await db.verified_clients.find_one({"artist_id": artist_id, "user_id": user["user_id"]})
+    if not verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Yorum yapabilmek için bu sanatçıdan dövme yaptırmış ve doğrulanmış olmalısın",
+        )
+    if not body.text and body.stars is None and not body.photo:
+        raise HTTPException(status_code=400, detail="En az bir alan doldurulmalı (puan, yorum veya görsel)")
+    doc = {
+        "review_id": f"r_{uuid.uuid4().hex[:12]}",
+        "artist_id": artist_id,
+        "user_id": user["user_id"],
+        "text": body.text,
+        "stars": body.stars,
+        "photo": body.photo,
+        "created_at": now_utc().isoformat(),
+    }
+    await db.reviews.insert_one(doc)
+    doc.pop("_id", None)
+    doc["user_name"] = user["name"]
+    doc["user_picture"] = user.get("picture")
+    return doc
+
+
+@api.delete("/reviews/{review_id}")
+async def delete_review(review_id: str, user=Depends(get_current_user)):
+    r = await db.reviews.find_one({"review_id": review_id})
+    if not r:
+        raise HTTPException(status_code=404, detail="Bulunamadı")
+    if r["user_id"] != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Yetkisiz")
+    await db.reviews.delete_one({"review_id": review_id})
+    return {"ok": True}
+
+
+@api.get("/users/me/reviews")
+async def my_reviews(user=Depends(get_current_user)):
+    """List reviews the current user has authored, with artist info."""
+    reviews = await db.reviews.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    for r in reviews:
+        a = await db.users.find_one({"user_id": r["artist_id"]}, {"_id": 0, "name": 1, "picture": 1, "studio_name": 1})
+        r["artist"] = a
+    return reviews
+
+
+# ---------- Verified clients (artist marks a user as confirmed client) ----------
+@api.post("/artists/me/verify-client")
+async def verify_client(body: VerifyClientIn, user=Depends(get_current_user)):
+    if user["role"] != "artist":
+        raise HTTPException(status_code=403, detail="Sadece sanatçılar müşteri doğrulayabilir")
+    target = await db.users.find_one({"email": body.email.lower().strip()}, {"_id": 0, "password_hash": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="Bu email ile kayıtlı kullanıcı yok")
+    if target["user_id"] == user["user_id"]:
+        raise HTTPException(status_code=400, detail="Kendinizi doğrulayamazsınız")
+    existing = await db.verified_clients.find_one(
+        {"artist_id": user["user_id"], "user_id": target["user_id"]}
+    )
+    if existing:
+        return {"already": True, "client": {"user_id": target["user_id"], "name": target["name"], "email": target["email"]}}
+    await db.verified_clients.insert_one({
+        "artist_id": user["user_id"],
+        "user_id": target["user_id"],
+        "verified_at": now_utc().isoformat(),
+    })
+    return {"already": False, "client": {"user_id": target["user_id"], "name": target["name"], "email": target["email"]}}
+
+
+@api.get("/artists/me/verified-clients")
+async def my_verified_clients(user=Depends(get_current_user)):
+    if user["role"] != "artist":
+        raise HTTPException(status_code=403, detail="Sadece sanatçılar görebilir")
+    rows = await db.verified_clients.find({"artist_id": user["user_id"]}, {"_id": 0}).to_list(1000)
+    out = []
+    for r in rows:
+        u = await db.users.find_one({"user_id": r["user_id"]}, {"_id": 0, "name": 1, "email": 1, "picture": 1})
+        if u:
+            out.append({**u, "verified_at": r["verified_at"]})
+    return out
+
+
+# ---------- Messages (1-1 DMs) ----------
+def _conv_id(a: str, b: str) -> str:
+    return "::".join(sorted([a, b]))
+
+
+@api.get("/messages/conversations")
+async def list_conversations(user=Depends(get_current_user)):
+    """Return distinct conversations for current user with latest message + other participant."""
+    cursor = db.messages.find(
+        {"$or": [{"sender_id": user["user_id"]}, {"receiver_id": user["user_id"]}]},
+        {"_id": 0},
+    ).sort("created_at", -1)
+    msgs = await cursor.to_list(2000)
+    convs = {}
+    for m in msgs:
+        other = m["receiver_id"] if m["sender_id"] == user["user_id"] else m["sender_id"]
+        if other not in convs:
+            convs[other] = m
+    out = []
+    for other_id, last in convs.items():
+        u = await db.users.find_one({"user_id": other_id}, {"_id": 0, "password_hash": 0})
+        if not u:
+            continue
+        out.append({"other_user": u, "last_message": last})
+    out.sort(key=lambda x: x["last_message"]["created_at"], reverse=True)
+    return out
+
+
+@api.get("/messages/{other_user_id}")
+async def conversation(other_user_id: str, user=Depends(get_current_user)):
+    cid = _conv_id(user["user_id"], other_user_id)
+    msgs = await db.messages.find({"conversation_id": cid}, {"_id": 0}).sort("created_at", 1).to_list(2000)
+    other = await db.users.find_one({"user_id": other_user_id}, {"_id": 0, "password_hash": 0})
+    if not other:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    return {"other_user": other, "messages": msgs}
+
+
+@api.post("/messages/{other_user_id}")
+async def send_message(other_user_id: str, body: MessageIn, user=Depends(get_current_user)):
+    if other_user_id == user["user_id"]:
+        raise HTTPException(status_code=400, detail="Kendinize mesaj gönderemezsiniz")
+    other = await db.users.find_one({"user_id": other_user_id})
+    if not other:
+        raise HTTPException(status_code=404, detail="Alıcı bulunamadı")
+    doc = {
+        "message_id": f"m_{uuid.uuid4().hex[:12]}",
+        "conversation_id": _conv_id(user["user_id"], other_user_id),
+        "sender_id": user["user_id"],
+        "receiver_id": other_user_id,
+        "content": body.content,
+        "created_at": now_utc().isoformat(),
+    }
+    await db.messages.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+# ---------- Location helpers (Türkiye il listesi) ----------
+TR_PROVINCES = [
+    "İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Adana", "Konya", "Gaziantep",
+    "Mersin", "Diyarbakır", "Kayseri", "Eskişehir", "Samsun", "Denizli", "Trabzon",
+    "Erzurum", "Sakarya", "Malatya", "Kahramanmaraş", "Van", "Şanlıurfa", "Hatay",
+    "Manisa", "Balıkesir", "Aydın", "Tekirdağ", "Muğla", "Kocaeli",
+]
+
+
+@api.get("/locations")
+async def locations():
+    """List Turkish provinces that currently have artists, plus full list as suggestions."""
+    artists = await db.users.find({"role": "artist"}, {"_id": 0, "location": 1}).to_list(2000)
+    counts = Counter()
+    for a in artists:
+        loc = (a.get("location") or "").split(",")[-1].strip()
+        if loc:
+            counts[loc] += 1
+    return {
+        "with_artists": [{"name": n, "count": c} for n, c in counts.most_common()],
+        "all_provinces": TR_PROVINCES,
+    }
+
+
 # ---------- Health ----------
 @api.get("/")
 async def root():
@@ -724,6 +1001,11 @@ async def startup():
     await db.ratings.create_index([("artist_id", 1), ("user_id", 1)], unique=True)
     await db.sessions.create_index("session_token", unique=True)
     await db.comments.create_index("artist_id")
+    await db.reviews.create_index("artist_id")
+    await db.reviews.create_index("user_id")
+    await db.verified_clients.create_index([("artist_id", 1), ("user_id", 1)], unique=True)
+    await db.messages.create_index("conversation_id")
+    await db.messages.create_index("created_at")
     logger.info("Indexes created. TattooMatch API ready.")
     # Seed admin
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@tattoomatch.com")
