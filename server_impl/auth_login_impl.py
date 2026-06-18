@@ -29,7 +29,7 @@ def do_login(body):
     if not email or not password:
         return 400, {"error": "email and password required"}
     db = _get_db()
-    if not db:
+    if db is None:
         return 500, {"error": "database not configured"}
     user = db.users.find_one({"email": email})
     if not user or not user.get("password_hash"):

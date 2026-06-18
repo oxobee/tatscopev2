@@ -41,7 +41,7 @@ def do_me(auth_header):
         return 401, {"error": "invalid token"}
     db = _get_db()
     user = None
-    if db:
+    if db is not None:
         user = db.users.find_one({"user_id": payload.get("sub")}, {"_id": 0, "password_hash": 0})
     if not user:
         return 404, {"error": "user not found"}
