@@ -37,6 +37,7 @@ app = Flask(__name__)
 
 
 @app.route('/', methods=['POST'])
+@app.route('/<path:_>', methods=['POST'])
 def handler():
     try:
         if hasattr(request, 'body'):

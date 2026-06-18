@@ -37,6 +37,7 @@ app = Flask(__name__)
 
 
 @app.route('/', methods=['GET'])
+@app.route('/<path:_>', methods=['GET'])
 def handler():
     headers = request.headers
     auth = headers.get("authorization") or headers.get("Authorization")
