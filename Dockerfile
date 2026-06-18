@@ -1,8 +1,9 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+# Use backend as working directory to keep paths explicit
+WORKDIR /app/backend
 
-# Install OS deps for common Python packages
+# Install minimal OS deps needed for building wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -10,12 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend sources into root build context
+# Copy only backend files to keep build context small
 COPY backend/ ./
 
-# Prefer render-specific requirements when available
-COPY backend/requirements.render.txt ./requirements.render.txt
-COPY backend/requirements.txt ./requirements.txt
+# Install minimal/production requirements
 RUN if [ -f requirements.render.txt ]; then \
       pip install --no-cache-dir -r requirements.render.txt; \
     else \
